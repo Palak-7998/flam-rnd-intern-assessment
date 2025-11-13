@@ -1,34 +1,63 @@
-package com.flam.edgeviewer
+// In MainActivity.kt
 
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
-import android.widget.TextView
-import com.flam.edgeviewer.databinding.ActivityMainBinding
+// ... imports (make sure you have android.opengl.GLSurfaceView)
 
 class MainActivity : AppCompatActivity() {
+    // ... existing member variables
 
-    private lateinit var binding: ActivityMainBinding
+    // Declare the renderer instance
+    private lateinit var glRenderer: MyGLRenderer // <--- ADD THIS
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // ... existing setup (binding, setContentView)
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        // V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V
+        // 1. Initialize OpenGL View
+        glRenderer = MyGLRenderer()
+        // Must use OpenGL ES 2.0 or higher
+        binding.glSurfaceView.setEGLContextClientVersion(2)
+        binding.glSurfaceView.setRenderer(glRenderer)
+        // Ensure continuous rendering for real-time video
+        binding.glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+        // ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
 
-        // Example of a call to a native method
-        binding.sampleText.text = stringFromJNI()
-    }
-
-    /**
-     * A native method that is implemented by the 'edgeviewer' native library,
-     * which is packaged with this application.
-     */
-    external fun stringFromJNI(): String
-
-    companion object {
-        // Used to load the 'edgeviewer' library on application startup.
-        init {
-            System.loadLibrary("edgeviewer")
+        if (allPermissionsGranted()) {
+            startCamera()
+        } else {
+            // ... request permissions
         }
     }
+
+    private fun startCamera() {
+        // ... CameraX setup logic (ProcessCameraProvider.getInstance(this))
+
+        // Image Analysis use case: where we capture frames
+        // ... code to build imageAnalyzer
+        .also {
+            it.setAnalyzer(cameraExecutor, FrameAnalyzer { inputMat ->
+                // Pass the frame's memory address to the C++ code for OpenCV processing
+                val processedMatAddress = processFrameNative(inputMat.nativeObjAddr)
+
+                // After processing, force the GLSurfaceView to redraw,
+                // which triggers the nativeOnDrawFrame() C++ function.
+                binding.glSurfaceView.requestRender() // <--- ADD THIS
+
+                // ... release memory
+            })
+        }
+
+        // ... rest of startCamera()
+    }
+
+    // ... onResume, onPause, onDestroy functions (ADD THEM for GLSurfaceView lifecycle)
+    override fun onResume() {
+        super.onResume()
+        binding.glSurfaceView.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        binding.glSurfaceView.onPause()
+    }
+    // ... rest of the file
 }
