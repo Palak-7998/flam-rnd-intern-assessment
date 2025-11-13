@@ -17,6 +17,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            cmake {
+                // You must add these flags here, inside the cmake block:
+                cppFlags += listOf("-fexceptions", "-frtti")
+            }
+        }
     }
 
     buildTypes {
